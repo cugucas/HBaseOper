@@ -5,8 +5,10 @@ import org.apache.hadoop.hbase.client.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.conf.Configuration;
 
@@ -117,6 +119,11 @@ public class HBaseOperator {
         close();
     }
 
+    public static <T extends DataClass> void addRow(String tableName, String columnFamily, T object){
+        connection = getConnection();
+        Put put = new Put(object.getRow());
+    }
+
     public static void addRows(String tableName, List<DataClass> rows) throws IOException{
         connection = getConnection();
         List<Put> putList = new ArrayList<>();
@@ -217,9 +224,9 @@ public class HBaseOperator {
         return rsList;
     }
 
-    public static List<DataClass> getAllRows(String tableName){
+    public static List<DataClass> getAllRows(String tableName) throws IOException{
         connection = getConnection();
-        Table table = connection.getTable(tableName);
+        Table table = connection.getTable(Bytes.toBytes(tableName));
         List<DataClass> rsList = new ArrayList<>();
         Scan scan = new Scan();
         ResultScanner rsc = table.getScanner(scan);
@@ -230,9 +237,19 @@ public class HBaseOperator {
     }
 
     public static long getRowCount(String tableName){
+        long rowCount = 0L;
         connection = getConnection();
         Table table = connection.getTable();
-        table.
+        Scan scan = new Scan();
+        scan.setCaching(500);
+        scan.setFilter(new FirstKeyOnlyFilter());
+        ResultScanner resultScanner = table.getScanner(scan);
+        for (Result result : resultScanner) {
+            rowCount += 1;
+        }
+        Date end=new Date();
+        System.out.println((end.getTime()-begin.getTime())/1000);
+        return rowCount;
     }
 
     public static List<DataClass> scanRows(String tableName, String startRow, String stopRow) throws IOException{
@@ -265,7 +282,7 @@ public class HBaseOperator {
         return tables;
     }
 
-    public static
+
 
 
 }
