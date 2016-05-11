@@ -39,30 +39,7 @@ public class HBaseOperator {
         connection = pool.getConnection();
     }
 
-    public static void createTable(String tableName, String[] familys) throws IOException{
 
-        HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
-        for(String family : familys) {
-            table.addFamily(new HColumnDescriptor(family));
-        }
-        //desc.(Compression.Algorithm.SNAPPY);
-
-        /*
-        if(null == connection){
-            pool = new HConnectionPool();
-            connection = pool.getConnection();
-        }
-        */
-        connection = getConnection();
-        admin = connection.getAdmin();
-        //createOrOverwriteTable(admin, table);
-        if (admin.tableExists(table.getTableName())) {
-            admin.disableTable(table.getTableName());
-            admin.deleteTable(table.getTableName());
-        }
-        admin.createTable(table);
-        close();
-    }
 
     /*
     public static void createOrOverwriteTable(Admin admin, HTableDescriptor table) throws IOException {
@@ -106,6 +83,44 @@ public class HBaseOperator {
             rc.setColumn(Bytes.toString(CellUtil.cloneQualifier(cell)));
         }
         return rc;
+    }
+
+    public static void createTable(String tableName, String[] familys) throws IOException{
+
+        HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
+        for(String family : familys) {
+            table.addFamily(new HColumnDescriptor(family));
+        }
+        //desc.(Compression.Algorithm.SNAPPY);
+
+        /*
+        if(null == connection){
+            pool = new HConnectionPool();
+            connection = pool.getConnection();
+        }
+        */
+        connection = getConnection();
+        admin = connection.getAdmin();
+        //createOrOverwriteTable(admin, table);
+        if (admin.tableExists(table.getTableName())) {
+            admin.disableTable(table.getTableName());
+            admin.deleteTable(table.getTableName());
+        }
+        admin.createTable(table);
+        close();
+    }
+
+    public static int deleteTable(String tableName) throws IOException{
+        connection = getConnection();
+        admin = connection.getAdmin();
+        int rs = 0;
+        if(admin.tableExists(TableName.valueOf(tableName))){
+            admin.disableTable(TableName.valueOf(tableName));
+            admin.deleteTable(TableName.valueOf(tableName));
+            rs = 1;
+        }
+        close();
+        return rs;
     }
 
     public static void addRow(String tableName, String rowKey, String colFamily, String col, String val)
@@ -281,8 +296,6 @@ public class HBaseOperator {
         close();
         return tables;
     }
-
-
 
 
 }
