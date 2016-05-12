@@ -131,6 +131,14 @@ public class HBaseOperator {
         close();
     }
 
+    public static <T extends DataObject> addRows(String tableName, String colFamily, T val) throws IOException{
+        connection = getConnection();
+        Table table = connection.getTable(TableName.valueOf(tableName));
+        Put put = new Put(val.getRowKey());
+
+    }
+
+
     public static void deleteRow(String tableName, String rowKey, String colFamily, String col)
         throws IOException{
         connection = getConnection();
