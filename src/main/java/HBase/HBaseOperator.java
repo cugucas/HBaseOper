@@ -5,8 +5,10 @@ import org.apache.hadoop.hbase.client.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.conf.Configuration;
 
@@ -37,30 +39,7 @@ public class HBaseOperator {
         connection = pool.getConnection();
     }
 
-    public static void createTable(String tableName, String[] familys) throws IOException{
 
-        HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
-        for(String family : familys) {
-            table.addFamily(new HColumnDescriptor(family));
-        }
-        //desc.(Compression.Algorithm.SNAPPY);
-
-        /*
-        if(null == connection){
-            pool = new HConnectionPool();
-            connection = pool.getConnection();
-        }
-        */
-        connection = getConnection();
-        admin = connection.getAdmin();
-        //createOrOverwriteTable(admin, table);
-        if (admin.tableExists(table.getTableName())) {
-            admin.disableTable(table.getTableName());
-            admin.deleteTable(table.getTableName());
-        }
-        admin.createTable(table);
-        close();
-    }
 
     /*
     public static void createOrOverwriteTable(Admin admin, HTableDescriptor table) throws IOException {
@@ -106,6 +85,44 @@ public class HBaseOperator {
         return rc;
     }
 
+    public static void createTable(String tableName, String[] familys) throws IOException{
+
+        HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
+        for(String family : familys) {
+            table.addFamily(new HColumnDescriptor(family));
+        }
+        //desc.(Compression.Algorithm.SNAPPY);
+
+        /*
+        if(null == connection){
+            pool = new HConnectionPool();
+            connection = pool.getConnection();
+        }
+        */
+        connection = getConnection();
+        admin = connection.getAdmin();
+        //createOrOverwriteTable(admin, table);
+        if (admin.tableExists(table.getTableName())) {
+            admin.disableTable(table.getTableName());
+            admin.deleteTable(table.getTableName());
+        }
+        admin.createTable(table);
+        close();
+    }
+
+    public static int deleteTable(String tableName) throws IOException{
+        connection = getConnection();
+        admin = connection.getAdmin();
+        int rs = 0;
+        if(admin.tableExists(TableName.valueOf(tableName))){
+            admin.disableTable(TableName.valueOf(tableName));
+            admin.deleteTable(TableName.valueOf(tableName));
+            rs = 1;
+        }
+        close();
+        return rs;
+    }
+
     public static void addRow(String tableName, String rowKey, String colFamily, String col, String val)
         throws IOException {
         connection = getConnection();
@@ -115,6 +132,11 @@ public class HBaseOperator {
         table.put(put);
         table.close();
         close();
+    }
+
+    public static <T extends DataClass> void addRow(String tableName, String columnFamily, T object){
+        connection = getConnection();
+        Put put = new Put(object.getRow());
     }
 
     public static void addRows(String tableName, List<DataClass> rows) throws IOException{
@@ -225,9 +247,9 @@ public class HBaseOperator {
         return rsList;
     }
 
-    public static List<DataClass> getAllRows(String tableName){
+    public static List<DataClass> getAllRows(String tableName) throws IOException{
         connection = getConnection();
-        Table table = connection.getTable(tableName);
+        Table table = connection.getTable(Bytes.toBytes(tableName));
         List<DataClass> rsList = new ArrayList<>();
         Scan scan = new Scan();
         ResultScanner rsc = table.getScanner(scan);
@@ -238,9 +260,19 @@ public class HBaseOperator {
     }
 
     public static long getRowCount(String tableName){
+        long rowCount = 0L;
         connection = getConnection();
         Table table = connection.getTable();
-        table.
+        Scan scan = new Scan();
+        scan.setCaching(500);
+        scan.setFilter(new FirstKeyOnlyFilter());
+        ResultScanner resultScanner = table.getScanner(scan);
+        for (Result result : resultScanner) {
+            rowCount += 1;
+        }
+        Date end=new Date();
+        System.out.println((end.getTime()-begin.getTime())/1000);
+        return rowCount;
     }
 
     public static List<DataClass> scanRows(String tableName, String startRow, String stopRow) throws IOException{
@@ -272,8 +304,6 @@ public class HBaseOperator {
         close();
         return tables;
     }
-
-    public static
 
 
 }
