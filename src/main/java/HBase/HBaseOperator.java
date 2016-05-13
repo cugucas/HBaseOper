@@ -4,8 +4,11 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
@@ -76,11 +79,16 @@ public class HBaseOperator {
     public static DataClass result2Bean(Result result){
         List<Cell> cells = result.listCells();
         DataClass rc = new DataClass();
+        String colfamily = "";
+        Map<String, HashMap<Long, String>> cell = new HashMap<String, HashMap<Long, String>>();
         for(Cell cell : cells){
+            colfamily = cell.getFamilyArray().toString();
+            String column = cell.getQualifierArray().toString();
             rc.setRow(Bytes.toString(CellUtil.cloneRow(cell)));
             rc.setTimestamp(cell.getTimestamp());
             rc.setColumnFamily(Bytes.toString(CellUtil.cloneFamily(cell)));
             rc.setColumn(Bytes.toString(CellUtil.cloneQualifier(cell)));
+
         }
         return rc;
     }
@@ -134,9 +142,28 @@ public class HBaseOperator {
         close();
     }
 
-    public static <T extends DataClass> void addRow(String tableName, String columnFamily, T object){
+    public static <T extends DataObject> void addRow(String tableName, String columnFamily, T object)
+        throws IOException{
         connection = getConnection();
-        Put put = new Put(object.getRow());
+        Table table = connection.getTable(TableName.valueOf(tableName));
+        Put put = new Put(Bytes.toBytes(object.getRowKey()));
+        Field[] fields = object.getClass().getFields();
+        for(Field field : fields){
+            String column = field.getName();
+            if(column.equalsIgnoreCase("rowKey")){
+                continue;
+            }
+            String value = null;
+            try {
+                value = field.get(object).toString();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+            put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes(column), Bytes.toBytes(value));
+        }
+        table.put(put);
+        table.close();
+        close();
     }
 
     public static void addRows(String tableName, List<DataClass> rows) throws IOException{
@@ -271,7 +298,7 @@ public class HBaseOperator {
             rowCount += 1;
         }
         Date end=new Date();
-        System.out.println((end.getTime()-begin.getTime())/1000);
+        //System.out.println((end.getTime()-begin.getTime())/1000);
         return rowCount;
     }
 
