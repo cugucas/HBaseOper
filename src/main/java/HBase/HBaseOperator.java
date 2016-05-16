@@ -5,6 +5,7 @@ import org.apache.hadoop.hbase.client.*;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -80,16 +81,20 @@ public class HBaseOperator {
         List<Cell> cells = result.listCells();
         DataClass rc = new DataClass();
         String colfamily = "";
-        Map<String, HashMap<Long, String>> cell = new HashMap<String, HashMap<Long, String>>();
+        String column = "";
+        Map<String, Map<Long, String>> rowCell = new HashMap<>();
+        Map<Long, String> timeVal = new HashMap<>();
+
         for(Cell cell : cells){
             colfamily = cell.getFamilyArray().toString();
-            String column = cell.getQualifierArray().toString();
-            rc.setRow(Bytes.toString(CellUtil.cloneRow(cell)));
-            rc.setTimestamp(cell.getTimestamp());
-            rc.setColumnFamily(Bytes.toString(CellUtil.cloneFamily(cell)));
-            rc.setColumn(Bytes.toString(CellUtil.cloneQualifier(cell)));
+            column = cell.getQualifierArray().toString();
+            //rc.setRow(Bytes.toString(CellUtil.cloneRow(cell)));
+            timeVal.put(cell.getTimestamp(), Bytes.toString(CellUtil.cloneValue(cell)));
+            //rc.setColumnFamily(Bytes.toString(CellUtil.cloneFamily(cell)));
+            column = (Bytes.toString(CellUtil.cloneQualifier(cell)));
 
         }
+        rowCell.put(colfamily, timeVal);
         return rc;
     }
 
@@ -153,7 +158,7 @@ public class HBaseOperator {
             if(column.equalsIgnoreCase("rowKey")){
                 continue;
             }
-            String value = null;
+            String value = "";
             try {
                 value = field.get(object).toString();
             } catch (IllegalAccessException e) {
@@ -166,6 +171,7 @@ public class HBaseOperator {
         close();
     }
 
+    /*
     public static void addRows(String tableName, List<DataClass> rows) throws IOException{
         connection = getConnection();
         List<Put> putList = new ArrayList<>();
@@ -179,11 +185,12 @@ public class HBaseOperator {
         table.close();
         close();
     }
+    */
 
-    public static <T extends DataObject> addRows(String tableName, String colFamily, T val) throws IOException{
+    public static <T extends DataObject> void addRows(String tableName, String colFamily, T val) throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
-        Put put = new Put(val.getRowKey());
+        Put put = new Put(Bytes.toBytes(val.getRowKey()));
 
     }
 
@@ -218,6 +225,7 @@ public class HBaseOperator {
         close();
     }
 
+    /*
     public static void deleteRows(String tableName, List<DataClass> rows) throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
@@ -236,6 +244,7 @@ public class HBaseOperator {
         table.close();
         close();
     }
+    */
 
     public static DataClass getRow(String tableName, String rowKey, String colFamily, String col)
         throws IOException{
@@ -276,7 +285,7 @@ public class HBaseOperator {
 
     public static List<DataClass> getAllRows(String tableName) throws IOException{
         connection = getConnection();
-        Table table = connection.getTable(Bytes.toBytes(tableName));
+        Table table = connection.getTable(TableName.valueOf(tableName));
         List<DataClass> rsList = new ArrayList<>();
         Scan scan = new Scan();
         ResultScanner rsc = table.getScanner(scan);
@@ -286,10 +295,10 @@ public class HBaseOperator {
         return rsList;
     }
 
-    public static long getRowCount(String tableName){
+    public static long getRowCount(String tableName) throws IOException{
         long rowCount = 0L;
         connection = getConnection();
-        Table table = connection.getTable();
+        Table table = connection.getTable(TableName.valueOf(tableName));
         Scan scan = new Scan();
         scan.setCaching(500);
         scan.setFilter(new FirstKeyOnlyFilter());
@@ -307,13 +316,37 @@ public class HBaseOperator {
         List<DataClass> rsList = new ArrayList<>();
         Table table = connection.getTable(TableName.valueOf(tableName));
         Scan scan = new Scan();
-        if (null != startRow && !startRow.isEmpty()) {
+        if (null != startRow || !startRow.isEmpty()) {
             scan.setStartRow(Bytes.toBytes(startRow));
         }
         if (null != stopRow && !stopRow.isEmpty()) {
             scan.setStopRow(Bytes.toBytes(stopRow));
         }
         ResultScanner rsc = table.getScanner(scan);
+        for(Result rs : rsc){
+            rsList.add(result2Bean(rs));
+        }
+        return rsList;
+    }
+
+    public static List<DataClass> scanRowsBetweenTime(String tableName, String startTime, String endTime) throws IOException{
+        connection = getConnection();
+        Table table = connection.getTable(TableName.valueOf(tableName));
+        Scan scan = new Scan();
+        String startRow = "";
+        String endRow = "";
+        if (null != startTime && !startTime.isEmpty()){
+            startRow = NosqlUtils.getQueryString(startTime, null, null);
+            scan.setStartRow(Bytes.toBytes(startRow));
+        }
+
+        if(null != endTime && !endTime.isEmpty()){
+            endRow = NosqlUtils.getQueryString(endTime, null, null);
+            scan.setStopRow(Bytes.toBytes(endRow));
+        }
+
+        ResultScanner rsc = table.getScanner(scan);
+        List<DataClass> rsList = new ArrayList<>();
         for(Result rs : rsc){
             rsList.add(result2Bean(rs));
         }
