@@ -8,7 +8,7 @@ import java.util.Map;
 public class DataClass {
     public String row;
     public String columnFamily;
-    public Map<String, Map<Long, String>> cell;
+    public Map<String, Map<Long, String>> cell;//column, timestamp, val
 
     public String getRow() {
         return row;

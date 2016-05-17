@@ -185,7 +185,7 @@ public class HBaseOperator {
         table.close();
         close();
     }
-    */
+
 
     public static <T extends DataObject> void addRows(String tableName, String colFamily, T val) throws IOException{
         connection = getConnection();
@@ -193,7 +193,7 @@ public class HBaseOperator {
         Put put = new Put(Bytes.toBytes(val.getRowKey()));
 
     }
-
+    */
 
     public static void deleteRow(String tableName, String rowKey, String colFamily, String col)
         throws IOException{
