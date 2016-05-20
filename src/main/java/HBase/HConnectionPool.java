@@ -34,6 +34,10 @@ public class HConnectionPool {
     public static Connection getConnection(){
         if(null == configuration) {
             configuration = HBaseConfiguration.create();
+            ////////////////////
+            configuration.set("hbase.zookeeper.property.clientPort", "2181");
+            configuration.set("hbase.zookeeper.quorum", "192.168.1.103");
+            //configuration.set("zookeeper.znode.parent", "/hbase-unsecure");
         }
         Connection conn = null;
         try {

@@ -1,11 +1,12 @@
 package HBase;
 
+import domain.HBaseData;
+import domain.HBaseRowData;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -77,6 +78,7 @@ public class HBaseOperator {
         }
     }
 
+    /*
     public static DataClass result2Bean(Result result){
         List<Cell> cells = result.listCells();
         DataClass rc = new DataClass();
@@ -97,6 +99,82 @@ public class HBaseOperator {
         rowCell.put(colfamily, timeVal);
         return rc;
     }
+    */
+
+
+    public static HBaseData results2Bean(Result result){
+        List<Cell> cells = result.listCells();
+
+        HBaseData data = new HBaseData();
+        List<HBaseRowData> rows = new ArrayList<>();
+
+        /*
+        for(Cell cell : cellList){
+            HBaseRowData row = new HBaseRowData();
+            Map<String, String> cells = new HashMap<>();
+            row.setColumnFamily(cell.getFamilyArray().toString());
+            cells.put(Bytes.toString(CellUtil.cloneQualifier(cell)), Bytes.toString(CellUtil.cloneValue(cell)));
+            row.setTimestamp(cell.getTimestamp());
+
+            rows.add(row);
+        }
+        */
+        rows.add(getSingleRowData(cells));
+        data.setRows(rows);
+        return data;
+    }
+
+    public static HBaseRowData getSingleRowData(List<Cell> cellList){
+        //List<HBaseRowData> rows = new ArrayList<>();
+        HBaseRowData row = new HBaseRowData();
+        for(Cell cell : cellList){
+            Map<String, String> cells = new HashMap<>();
+            row.setColumnFamily(cell.getFamilyArray().toString());
+            cells.put(Bytes.toString(CellUtil.cloneQualifier(cell)), Bytes.toString(CellUtil.cloneValue(cell)));
+            row.setTimestamp(cell.getTimestamp());
+
+            //rows.add(row);
+        }
+        return row;
+    }
+
+
+
+    public static HBaseData results2Bean(Result[] results){
+        HBaseData data = new HBaseData();
+        List<HBaseRowData> rows = new ArrayList<>();
+        for(Result result : results){
+
+            List<Cell> cells = result.listCells();
+            rows.add(getSingleRowData(cells));
+            /*for(Cell cell : cellList){
+                HBaseRowData row = new HBaseRowData();
+                Map<String, String> cells = new HashMap<>();
+                row.setColumnFamily(cell.getFamilyArray().toString());
+                cells.put(Bytes.toString(CellUtil.cloneQualifier(cell)), Bytes.toString(CellUtil.cloneValue(cell)));
+                row.setTimestamp(cell.getTimestamp());
+
+                rows.add(row);
+            }
+            */
+        }
+
+        data.setRows(rows);
+        return data;
+    }
+
+    public static HBaseData results2Bean(ResultScanner results){
+        HBaseData data = new HBaseData();
+        List<HBaseRowData> rows = new ArrayList<>();
+        for(Result result : results){
+            List<Cell> cells = result.listCells();
+            rows.add(getSingleRowData(cells));
+
+        }
+
+        data.setRows(rows);
+        return data;
+    }
 
     public static void createTable(String tableName, String[] familys) throws IOException{
 
@@ -114,11 +192,13 @@ public class HBaseOperator {
         */
         connection = getConnection();
         admin = connection.getAdmin();
-        //createOrOverwriteTable(admin, table);
+
+        /*
         if (admin.tableExists(table.getTableName())) {
             admin.disableTable(table.getTableName());
             admin.deleteTable(table.getTableName());
         }
+        */
         admin.createTable(table);
         close();
     }
@@ -142,6 +222,20 @@ public class HBaseOperator {
         Table table = connection.getTable(TableName.valueOf(tableName));
         Put put = new Put(Bytes.toBytes(rowKey));
         put.addColumn(Bytes.toBytes(colFamily), Bytes.toBytes(col), Bytes.toBytes(val));
+        table.put(put);
+        table.close();
+        close();
+    }
+
+    public static void addRow(String tableName, String rowKey, String colFamily, Map<String, String> cell)
+        throws IOException {
+        connection = getConnection();
+        Table table = connection.getTable(TableName.valueOf(tableName));
+        Put put = new Put(Bytes.toBytes(rowKey));
+        for(Map.Entry<String, String> entry : cell.entrySet()){
+            put.addColumn(Bytes.toBytes(colFamily), Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
+        }
+
         table.put(put);
         table.close();
         close();
@@ -246,7 +340,7 @@ public class HBaseOperator {
     }
     */
 
-    public static DataClass getRow(String tableName, String rowKey, String colFamily, String col)
+    public static HBaseData getRow(String tableName, String rowKey, String colFamily, String col)
         throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
@@ -259,14 +353,14 @@ public class HBaseOperator {
         }
 
         Result result = table.get(get);
-        DataClass dc = result2Bean(result);
+        HBaseData dc = results2Bean(result);
 
         table.close();
         close();
         return dc;
     }
 
-    public static List<DataClass> getRows(String tableName, String[] rowKeyList) throws IOException{
+    public static HBaseData getRows(String tableName, String[] rowKeyList) throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
         List<Get> getList = new ArrayList<>();
@@ -275,24 +369,16 @@ public class HBaseOperator {
             getList.add(get);
         }
         Result[] results = table.get(getList);
-        List<DataClass> rsList = new ArrayList<>();
-        for(Result result : results){
-            rsList.add(result2Bean(result));
-        }
 
-        return rsList;
+        return results2Bean(results);
     }
 
-    public static List<DataClass> getAllRows(String tableName) throws IOException{
+    public static HBaseData getAllRows(String tableName) throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
-        List<DataClass> rsList = new ArrayList<>();
         Scan scan = new Scan();
         ResultScanner rsc = table.getScanner(scan);
-        for(Result rs : rsc){
-            rsList.add(result2Bean(rs));
-        }
-        return rsList;
+        return results2Bean(rsc);
     }
 
     public static long getRowCount(String tableName) throws IOException{
@@ -306,14 +392,14 @@ public class HBaseOperator {
         for (Result result : resultScanner) {
             rowCount += 1;
         }
-        Date end=new Date();
+        Date end = new Date();
         //System.out.println((end.getTime()-begin.getTime())/1000);
         return rowCount;
     }
 
-    public static List<DataClass> scanRows(String tableName, String startRow, String stopRow) throws IOException{
+    public static HBaseData scanRows(String tableName, String startRow, String stopRow) throws IOException{
         connection = getConnection();
-        List<DataClass> rsList = new ArrayList<>();
+
         Table table = connection.getTable(TableName.valueOf(tableName));
         Scan scan = new Scan();
         if (null != startRow || !startRow.isEmpty()) {
@@ -323,13 +409,10 @@ public class HBaseOperator {
             scan.setStopRow(Bytes.toBytes(stopRow));
         }
         ResultScanner rsc = table.getScanner(scan);
-        for(Result rs : rsc){
-            rsList.add(result2Bean(rs));
-        }
-        return rsList;
+        return results2Bean(rsc);
     }
 
-    public static List<DataClass> scanRowsBetweenTime(String tableName, String startTime, String endTime) throws IOException{
+    public static HBaseData scanRowsBetweenTime(String tableName, String startTime, String endTime) throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
         Scan scan = new Scan();
@@ -346,11 +429,7 @@ public class HBaseOperator {
         }
 
         ResultScanner rsc = table.getScanner(scan);
-        List<DataClass> rsList = new ArrayList<>();
-        for(Result rs : rsc){
-            rsList.add(result2Bean(rs));
-        }
-        return rsList;
+        return results2Bean(rsc);
     }
 
     public static List<String> listTables() throws IOException{

@@ -10,7 +10,7 @@ import java.io.OutputStream;
  */
 public class ClassParse {
 
-    public String obj2Json(Object obj){
+    public static String obj2Json(Object obj){
         if(null == obj){
             return null;
         }
@@ -24,5 +24,16 @@ public class ClassParse {
 
         String result = out.toString();
         return result;
+    }
+
+    public static Object json2Obj(String jsonString, Class clazz){
+        ObjectMapper mapper = new ObjectMapper();
+        Object obj = null;
+        try {
+            obj  = mapper.readValue(jsonString, clazz);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return obj;
     }
 }
