@@ -241,7 +241,7 @@ public class HBaseOperator {
         close();
     }
 
-    public static <T extends DataObject> void addRow(String tableName, String columnFamily, T object)
+    public static <T extends HBaseDataClass> void addRow(String tableName, String columnFamily, T object)
         throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
@@ -281,7 +281,7 @@ public class HBaseOperator {
     }
 
 
-    public static <T extends DataObject> void addRows(String tableName, String colFamily, T val) throws IOException{
+    public static <T extends HBaseDataClass> void addRows(String tableName, String colFamily, T val) throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
         Put put = new Put(Bytes.toBytes(val.getRowKey()));
@@ -306,7 +306,8 @@ public class HBaseOperator {
         close();
     }
 
-    public static void deleteRows(String tableName, String[] rowKeyList) throws IOException{
+    public static void deleteRows(String tableName, List<String> rowKeyList) throws IOException{
+
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
         List<Delete> deleteList = new ArrayList<>();
@@ -340,7 +341,7 @@ public class HBaseOperator {
     }
     */
 
-    public static HBaseData getRow(String tableName, String rowKey, String colFamily, String col)
+    public static HBaseData getCell(String tableName, String rowKey, String colFamily, String col)
         throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
@@ -360,7 +361,20 @@ public class HBaseOperator {
         return dc;
     }
 
-    public static HBaseData getRows(String tableName, String[] rowKeyList) throws IOException{
+    public static HBaseData getRow(String tableName, String rowKey) throws IOException{
+        connection = getConnection();
+        Table table = connection.getTable(TableName.valueOf(tableName));
+        Get get = new Get(Bytes.toBytes(rowKey));
+
+        Result result = table.get(get);
+        HBaseData dc = results2Bean(result);
+
+        table.close();
+        close();
+        return dc;
+    }
+
+    public static HBaseData getRows(String tableName, List<String> rowKeyList) throws IOException{
         connection = getConnection();
         Table table = connection.getTable(TableName.valueOf(tableName));
         List<Get> getList = new ArrayList<>();

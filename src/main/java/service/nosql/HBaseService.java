@@ -1,7 +1,7 @@
 package service.nosql;
 
 import HBase.DataClass;
-import HBase.DataObject;
+import HBase.HBaseDataClass;
 import domain.HBaseData;
 import HBase.HBaseOperator;
 import ClassParse.ClassParse;
@@ -45,7 +45,7 @@ public class HBaseService {
         }
     }
 
-    public <T extends DataObject> void add(String tableName, String columnFamily, T object){
+    public <T extends HBaseDataClass> void add(String tableName, String columnFamily, T object){
         try {
             HBaseOperator.addRow(tableName, columnFamily, object);
         }catch (IOException e){
@@ -56,7 +56,7 @@ public class HBaseService {
     public String getByRowkey(String tableName, String rowKey){
         HBaseData result = new HBaseData();
         try {
-            result = HBaseOperator.getRow(tableName, rowKey, null, null);
+            result = HBaseOperator.getRow(tableName, rowKey);
         }catch (IOException e){
             e.printStackTrace();
         }
@@ -65,10 +65,10 @@ public class HBaseService {
     }
 
     public String getByRowKeyList(String tableName, List<String> rowKeyList){
-        String[] list = (String[]) rowKeyList.toArray();
+        //String[] list = (String[]) rowKeyList.toArray();
         HBaseData result = new HBaseData();
         try{
-            result = HBaseOperator.getRows(tableName, list);
+            result = HBaseOperator.getRows(tableName, rowKeyList);
         }catch (IOException e){
             e.printStackTrace();
         }
@@ -94,9 +94,9 @@ public class HBaseService {
     }
 
     public void deleteByRowKeyList(String tableName, List<String> rowKeyList){
-        String[] list = (String[]) rowKeyList.toArray();
+        //String[] list = (String[]) rowKeyList.toArray();
         try{
-            HBaseOperator.deleteRows(tableName, list);
+            HBaseOperator.deleteRows(tableName, rowKeyList);
         }catch (IOException e){
             e.printStackTrace();
         }

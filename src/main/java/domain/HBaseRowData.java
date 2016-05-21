@@ -1,23 +1,29 @@
 package domain;
 
+import HBase.HBaseDataClass;
+
 import java.util.Map;
 
 /**
  * Created by LJian on 2016/5/19.
  */
-public class HBaseRowData {
-    public String rowKey;
+public class HBaseRowData extends HBaseDataClass{
+    //public String rowKey;
     public String columnFamily;
     public Long timestamp;
     public Map<String, String> cells;
 
+    /*
     public String getRowKey() {
         return rowKey;
     }
+    */
 
+    /*
     public void setRowKey(String rowKey) {
         this.rowKey = rowKey;
     }
+    */
 
     public String getColumnFamily() {
         return columnFamily;
